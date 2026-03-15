@@ -270,23 +270,17 @@ class WindowGenerator():
         f'Label indices: {self.label_indices}',
         f'Label column name(s): {self.label_columns}'])
 
-# RNN with LSTM - multioutput - autoregressive
-wide_window = WindowGenerator(
-    input_width=24, label_width=1, shift=1, label_columns=["Temperatur_2m (°C)"])
-
-lstm_model = tf.keras.models.Sequential([
-    # Shape [batch, time, features] => [batch, time, lstm_units]
-    tf.keras.layers.LSTM(32, return_sequences=True),
-    # Shape => [batch, time, features]
-    tf.keras.layers.Dense(units=1)
-])
-
 MAX_EPOCHS = 20
-
 def compile_and_fit(model, window, patience=2):
   early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                     patience=patience,
                                                     mode='min')
+                                                    
+  checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    "best_model",
+    monitor="val_loss",
+    save_best_only=True
+  )
 
   model.compile(loss=tf.keras.losses.MeanSquaredError(),
                 optimizer=tf.keras.optimizers.Adam(),
@@ -294,10 +288,74 @@ def compile_and_fit(model, window, patience=2):
 
   history = model.fit(window.train, epochs=MAX_EPOCHS,
                       validation_data=window.val,
-                      callbacks=[early_stopping])
+                      callbacks=[early_stopping, checkpoint])
   return history
 
-history = compile_and_fit(lstm_model, wide_window)
+# LSTM multi output - multistep autoregressive
+class FeedBack(tf.keras.Model):
+    def __init__(self, units, out_steps, num_features):
+        super().__init__()
+        self.out_steps = out_steps
+        self.units = units
+        self.num_features = num_features
 
-val_performance = lstm_model.evaluate(wide_window.val, return_dict=True)
-performance = lstm_model.evaluate(wide_window.test, verbose=0, return_dict=True)
+        self.lstm_cell = tf.keras.layers.LSTMCell(units)
+        self.lstm_rnn = tf.keras.layers.RNN(
+            self.lstm_cell,
+            return_state=True
+        )
+        self.dense = tf.keras.layers.Dense(num_features)
+
+    def warmup(self, inputs):
+        # inputs shape: (batch, time, features)
+        x, *state = self.lstm_rnn(inputs)
+        prediction = self.dense(x)   # (batch, features)
+        return prediction, state
+
+    def call(self, inputs, training=None):
+        predictions = []
+
+        # First prediction from the full input history
+        prediction, state = self.warmup(inputs)
+        predictions.append(prediction)
+
+        # Predict remaining future steps autoregressively
+        for _ in range(1, self.out_steps):
+            x = prediction
+            x, state = self.lstm_cell(x, states=state, training=training)
+            prediction = self.dense(x)
+            predictions.append(prediction)
+
+        # Stack to shape (time, batch, features)
+        predictions = tf.stack(predictions)
+
+        # Transpose to shape (batch, time, features)
+        predictions = tf.transpose(predictions, [1, 0, 2])
+        return predictions
+        
+OUT_STEPS = 24
+num_features = train_df.shape[1]
+
+multi_window = WindowGenerator(
+    input_width=24,
+    label_width=OUT_STEPS,
+    shift=OUT_STEPS
+)
+
+feedback_model = FeedBack(
+    units=32,
+    out_steps=OUT_STEPS,
+    num_features=num_features
+)
+
+history = compile_and_fit(feedback_model, multi_window)
+
+val_performance = feedback_model.evaluate(multi_window.val, return_dict=True)
+test_performance = feedback_model.evaluate(multi_window.test, return_dict=True)
+
+print("Validation:", val_performance)
+print("Test:", test_performance)
+
+feedback_model.save("weather_lstm_model")
+multi_window.plot(feedback_model, plot_col="Temperatur_2m (°C)")
+
