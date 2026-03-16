@@ -157,10 +157,6 @@ train_df = pd.read_csv("./data/train_normalized.csv")
 val_df = pd.read_csv("./data/val_normalized.csv")
 test_df = pd.read_csv("./data/test_normalized.csv")
 
-print(train_mean, train_std)
-
-column_indices = {name: i for i, name in enumerate(train_df.columns)}
-
 class WindowGenerator():
   def __init__(self, input_width, label_width, shift,
                train_df=train_df, val_df=val_df, test_df=test_df,
@@ -204,7 +200,6 @@ class WindowGenerator():
     # manually. This way the `tf.data.Datasets` are easier to inspect.
     inputs.set_shape([None, self.input_width, None])
     labels.set_shape([None, self.label_width, None])
-
     return inputs, labels
   
   def plot(self, model=None, plot_col='Temperatur_2m (°C)', max_subplots=3, normed=True):
@@ -300,7 +295,7 @@ class WindowGenerator():
         f'Label column name(s): {self.label_columns}'])
 
 MAX_EPOCHS = 20
-model_path = "model_simple.keras"
+model_path = "model_complex.keras"
 
 def compile_and_fit(model, window, patience=2):
   early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
@@ -308,7 +303,7 @@ def compile_and_fit(model, window, patience=2):
                                                     mode='min')
                                                     
   checkpoint = tf.keras.callbacks.ModelCheckpoint(
-    "best_model.keras",
+    model_path,
     monitor="val_loss",
     save_best_only=True
   )
@@ -332,7 +327,11 @@ multi_window = WindowGenerator(
     shift=OUT_STEPS,
     label_columns=["Temperatur_2m (°C)", "Relative_Luftfeuchtigkeit_2m (%)", "Regen (mm)", "Schneefall (cm)", "Luftdruck (hPa)", "Bewölkung (%)", "Windgeschwindigkeit_10m_x (km/h)", "Windgeschwindigkeit_10m_y (km/h)", "Windböen_10m_x (km/h)", "Windböen_10m_y (km/h)"]
 )
-num_features = len(multi_window.label_columns)
+
+if not multi_window.label_columns:
+  num_features = train_df.shape[1]
+else: 
+  num_features = len(multi_window.label_columns)
 
 if os.path.exists(model_path):
     print("Loading existing model...")
@@ -344,14 +343,13 @@ if os.path.exists(model_path):
 else:
     print("Training new model...")
 
-    multi_lstm_model = tf.keras.Sequential([
+    """multi_lstm_model = tf.keras.Sequential([
         tf.keras.layers.LSTM(32, return_sequences=False),
         tf.keras.layers.Dense(OUT_STEPS * num_features,
                               kernel_initializer=tf.initializers.zeros()),
         tf.keras.layers.Reshape([OUT_STEPS, num_features])
-    ])
+    ])"""
 
-    """
     multi_lstm_model = tf.keras.Sequential([
         tf.keras.layers.LSTM(128, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
@@ -362,7 +360,6 @@ else:
         tf.keras.layers.Dense(OUT_STEPS * num_features),
         tf.keras.layers.Reshape([OUT_STEPS, num_features])
     ])
-    """
 
     history = compile_and_fit(multi_lstm_model, multi_window)
 
