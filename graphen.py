@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 
 plt.style.use("dark_background")
-
 pd.set_option("display.max_columns", None)
 pd.set_option("display.width", None)
-# Lade die Daten
+
 """
+# Lade die Daten
+
 df = pd.read_csv("./data/data_raw.csv")
 print(df.agg(["min", "max"]))
 
@@ -141,6 +142,16 @@ plt.savefig("./graphs/train_normalized_min_max.png", dpi=200)
 plt.close()
 """
 
+# Get norm factor
+df = pd.read_csv("./data/data_ready_de.csv")
+n = len(df)
+
+train_df = df[0:int(n*0.7)]
+
+# Normalisiere die Daten --> Circa gleiche Amplitude mit Durchschnitt bei 0
+train_mean = train_df.mean()
+train_std = train_df.std()
+
 train_df = pd.read_csv("./data/train_normalized.csv")
 val_df = pd.read_csv("./data/val_normalized.csv")
 test_df = pd.read_csv("./data/test_normalized.csv")
@@ -193,7 +204,7 @@ class WindowGenerator():
 
     return inputs, labels
   
-  def plot(self, model=None, plot_col='Temperatur_2m (°C)', max_subplots=3):
+  def plot(self, model=None, plot_col='Temperatur_2m (°C)', max_subplots=3, normed=True):
     inputs, labels = self.example
     plt.figure(figsize=(12, 8))
     plot_col_index = self.column_indices[plot_col]
@@ -201,8 +212,12 @@ class WindowGenerator():
     for n in range(max_n):
       plt.subplot(max_n, 1, n+1)
       plt.ylabel(f'{plot_col} [normed]')
-      plt.plot(self.input_indices, inputs[n, :, plot_col_index],
-              label='Inputs', marker='.', zorder=-10)
+      if normed:
+        plt.plot(self.input_indices, inputs[n, :, plot_col_index],
+                label='Inputs', marker='.', zorder=-10)
+      else:
+        plt.plot(self.input_indices, inputs[n, :, plot_col_index] * train_std.iloc[plot_col_index] + train_mean.iloc[plot_col_index],
+                label='Inputs', marker='.', zorder=-10)
 
       if self.label_columns:
         label_col_index = self.label_columns_indices.get(plot_col, None)
@@ -211,14 +226,23 @@ class WindowGenerator():
 
       if label_col_index is None:
         continue
-
-      plt.scatter(self.label_indices, labels[n, :, label_col_index],
-                  edgecolors='k', label='Labels', c='#2ca02c', s=64)
+      
+      if normed:
+        plt.scatter(self.label_indices, labels[n, :, label_col_index],
+                    edgecolors='k', label='Labels', c='#2ca02c', s=64)
+      else:
+        plt.scatter(self.label_indices, labels[n, :, label_col_index] * train_std.iloc[label_col_index] + train_mean.iloc[label_col_index],
+                    edgecolors='k', label='Labels', c='#2ca02c', s=64)
       if model is not None:
         predictions = model(inputs)
-        plt.scatter(self.label_indices, predictions[n, :, label_col_index],
-                    marker='X', edgecolors='k', label='Predictions',
-                    c='#ff7f0e', s=64)
+        if normed:
+          plt.scatter(self.label_indices, predictions[n, :, label_col_index],
+                      marker='X', edgecolors='k', label='Predictions',
+                      c='#ff7f0e', s=64)
+        else:
+          plt.scatter(self.label_indices, predictions[n, :, label_col_index] * train_std.iloc[label_col_index] + train_mean.iloc[label_col_index],
+                      marker='X', edgecolors='k', label='Predictions',
+                      c='#ff7f0e', s=64)
 
       if n == 0:
         plt.legend()
@@ -254,7 +278,7 @@ class WindowGenerator():
 
   @property
   def example(self):
-    """Get and cache an example batch of `inputs, labels` for plotting."""
+    # Get and cache an example batch of `inputs, labels` for plotting.
     result = getattr(self, '_example', None)
     if result is None:
       # No example batch was found, so get one from the `.train` dataset
@@ -277,7 +301,7 @@ def compile_and_fit(model, window, patience=2):
                                                     mode='min')
                                                     
   checkpoint = tf.keras.callbacks.ModelCheckpoint(
-    "best_model",
+    "best_model.keras",
     monitor="val_loss",
     save_best_only=True
   )
@@ -291,71 +315,36 @@ def compile_and_fit(model, window, patience=2):
                       callbacks=[early_stopping, checkpoint])
   return history
 
-# LSTM multi output - multistep autoregressive
-class FeedBack(tf.keras.Model):
-    def __init__(self, units, out_steps, num_features):
-        super().__init__()
-        self.out_steps = out_steps
-        self.units = units
-        self.num_features = num_features
-
-        self.lstm_cell = tf.keras.layers.LSTMCell(units)
-        self.lstm_rnn = tf.keras.layers.RNN(
-            self.lstm_cell,
-            return_state=True
-        )
-        self.dense = tf.keras.layers.Dense(num_features)
-
-    def warmup(self, inputs):
-        # inputs shape: (batch, time, features)
-        x, *state = self.lstm_rnn(inputs)
-        prediction = self.dense(x)   # (batch, features)
-        return prediction, state
-
-    def call(self, inputs, training=None):
-        predictions = []
-
-        # First prediction from the full input history
-        prediction, state = self.warmup(inputs)
-        predictions.append(prediction)
-
-        # Predict remaining future steps autoregressively
-        for _ in range(1, self.out_steps):
-            x = prediction
-            x, state = self.lstm_cell(x, states=state, training=training)
-            prediction = self.dense(x)
-            predictions.append(prediction)
-
-        # Stack to shape (time, batch, features)
-        predictions = tf.stack(predictions)
-
-        # Transpose to shape (batch, time, features)
-        predictions = tf.transpose(predictions, [1, 0, 2])
-        return predictions
+# LSTM multi output - one shot 24h output
         
 OUT_STEPS = 24
 num_features = train_df.shape[1]
 
 multi_window = WindowGenerator(
-    input_width=24,
+    input_width=120,
     label_width=OUT_STEPS,
     shift=OUT_STEPS
 )
 
-feedback_model = FeedBack(
-    units=32,
-    out_steps=OUT_STEPS,
-    num_features=num_features
-)
 
-history = compile_and_fit(feedback_model, multi_window)
+multi_lstm_model = tf.keras.Sequential([
+    # Shape [batch, time, features] => [batch, lstm_units].
+    # Adding more `lstm_units` just overfits more quickly.
+    tf.keras.layers.LSTM(32, return_sequences=False),
+    # Shape => [batch, out_steps*features].
+    tf.keras.layers.Dense(OUT_STEPS*num_features,
+                          kernel_initializer=tf.initializers.zeros()),
+    # Shape => [batch, out_steps, features].
+    tf.keras.layers.Reshape([OUT_STEPS, num_features])
+])
 
-val_performance = feedback_model.evaluate(multi_window.val, return_dict=True)
-test_performance = feedback_model.evaluate(multi_window.test, return_dict=True)
+#history = compile_and_fit(multi_lstm_model, multi_window)
+multi_lstm_model = tf.keras.models.load_model("best_model.keras")
 
-print("Validation:", val_performance)
-print("Test:", test_performance)
+#val_performance = multi_lstm_model.evaluate(multi_window.val, return_dict=True)
+#test_performance = multi_lstm_model.evaluate(multi_window.test, return_dict=True)
 
-feedback_model.save("weather_lstm_model")
-multi_window.plot(feedback_model, plot_col="Temperatur_2m (°C)")
+#print("Validation:", val_performance)
+#print("Test:", test_performance)
 
+multi_window.plot(multi_lstm_model, plot_col="Temperatur_2m (°C)", normed=False)
