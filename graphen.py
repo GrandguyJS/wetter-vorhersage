@@ -157,6 +157,8 @@ train_df = pd.read_csv("./data/train_normalized.csv")
 val_df = pd.read_csv("./data/val_normalized.csv")
 test_df = pd.read_csv("./data/test_normalized.csv")
 
+print(train_mean, train_std)
+
 column_indices = {name: i for i, name in enumerate(train_df.columns)}
 
 class WindowGenerator():
@@ -207,18 +209,19 @@ class WindowGenerator():
   
   def plot(self, model=None, plot_col='Temperatur_2m (°C)', max_subplots=3, normed=True):
     inputs, labels = self.example
+
     plt.figure(figsize=(12, 8))
     plot_col_index = self.column_indices[plot_col]
     max_n = min(max_subplots, len(inputs))
     for n in range(max_n):
       plt.subplot(max_n, 1, n+1)
-      plt.ylabel(f'{plot_col} [normed]')
+      plt.ylabel(f'{plot_col} {"[normalisiert]" if normed else ""}')
       if normed:
         plt.plot(self.input_indices, inputs[n, :, plot_col_index],
-                label='Inputs', marker='.', zorder=-10)
+                label='Vergangenheit', marker='.', zorder=-10)
       else:
         plt.plot(self.input_indices, inputs[n, :, plot_col_index] * train_std.iloc[plot_col_index] + train_mean.iloc[plot_col_index],
-                label='Inputs', marker='.', zorder=-10)
+                label='Vergangenheit', marker='.', zorder=-10)
 
       if self.label_columns:
         label_col_index = self.label_columns_indices.get(plot_col, None)
@@ -230,25 +233,26 @@ class WindowGenerator():
       
       if normed:
         plt.scatter(self.label_indices, labels[n, :, label_col_index],
-                    edgecolors='k', label='Labels', c='#2ca02c', s=64)
+                    edgecolors='k', label='Tatsächlich', c='#2ca02c', s=64)
       else:
         plt.scatter(self.label_indices, labels[n, :, label_col_index] * train_std.iloc[label_col_index] + train_mean.iloc[label_col_index],
-                    edgecolors='k', label='Labels', c='#2ca02c', s=64)
+                    edgecolors='k', label='Tatsächlich', c='#2ca02c', s=64)
       if model is not None:
         predictions = model(inputs)
         if normed:
           plt.scatter(self.label_indices, predictions[n, :, label_col_index],
-                      marker='X', edgecolors='k', label='Predictions',
+                      marker='X', edgecolors='k', label='Hervorsagen',
                       c='#ff7f0e', s=64)
         else:
           plt.scatter(self.label_indices, predictions[n, :, label_col_index] * train_std.iloc[label_col_index] + train_mean.iloc[label_col_index],
-                      marker='X', edgecolors='k', label='Predictions',
+                      marker='X', edgecolors='k', label='Hervorsagen',
                       c='#ff7f0e', s=64)
 
       if n == 0:
         plt.legend()
 
-    plt.xlabel('Time [h]')
+    plt.xlabel('Zeit [h]')
+    plt.xticks(np.arange(0, self.total_window_size+1, 24))
     plt.show()
 
   def make_dataset(self, data):
@@ -296,6 +300,8 @@ class WindowGenerator():
         f'Label column name(s): {self.label_columns}'])
 
 MAX_EPOCHS = 20
+model_path = "model_simple.keras"
+
 def compile_and_fit(model, window, patience=2):
   early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                     patience=patience,
@@ -327,8 +333,6 @@ multi_window = WindowGenerator(
     shift=OUT_STEPS
 )
 
-model_path = "best_model.keras"
-
 if os.path.exists(model_path):
     print("Loading existing model...")
     multi_lstm_model = tf.keras.models.load_model(model_path)
@@ -347,10 +351,11 @@ else:
 
     history = compile_and_fit(multi_lstm_model, multi_window)
 
-val_performance = multi_lstm_model.evaluate(multi_window.val, return_dict=True)
-test_performance = multi_lstm_model.evaluate(multi_window.test, return_dict=True)
+if input("Evaluate and test? (y | n)? ").lower() == "y":
+  val_performance = multi_lstm_model.evaluate(multi_window.val, return_dict=True)
+  test_performance = multi_lstm_model.evaluate(multi_window.test, return_dict=True)
 
-print("Validation:", val_performance)
-print("Test:", test_performance)
+  print("Validation:", val_performance)
+  print("Test:", test_performance)
 
-multi_window.plot(multi_lstm_model, plot_col="Temperatur_2m (°C)", normed=False)
+multi_window.plot(multi_lstm_model, plot_col="Temperatur_2m (°C)", normed=False, max_subplots=1)
