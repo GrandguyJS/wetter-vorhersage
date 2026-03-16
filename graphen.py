@@ -1,6 +1,7 @@
 # Imports
 import pandas as pd # lese .csv Dateien
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
@@ -326,20 +327,25 @@ multi_window = WindowGenerator(
     shift=OUT_STEPS
 )
 
+model_path = "best_model.keras"
 
-multi_lstm_model = tf.keras.Sequential([
-    # Shape [batch, time, features] => [batch, lstm_units].
-    # Adding more `lstm_units` just overfits more quickly.
-    tf.keras.layers.LSTM(32, return_sequences=False),
-    # Shape => [batch, out_steps*features].
-    tf.keras.layers.Dense(OUT_STEPS*num_features,
-                          kernel_initializer=tf.initializers.zeros()),
-    # Shape => [batch, out_steps, features].
-    tf.keras.layers.Reshape([OUT_STEPS, num_features])
-])
+if os.path.exists(model_path):
+    print("Loading existing model...")
+    multi_lstm_model = tf.keras.models.load_model(model_path)
 
-history = compile_and_fit(multi_lstm_model, multi_window)
-#multi_lstm_model = tf.keras.models.load_model("best_model.keras")
+    if input("Train (y | n): ").lower() == "y":
+      history = compile_and_fit(multi_lstm_model, multi_window)
+
+else:
+    print("Training new model...")
+    multi_lstm_model = tf.keras.Sequential([
+        tf.keras.layers.LSTM(32, return_sequences=False),
+        tf.keras.layers.Dense(OUT_STEPS * num_features,
+                              kernel_initializer=tf.initializers.zeros()),
+        tf.keras.layers.Reshape([OUT_STEPS, num_features])
+    ])
+
+    history = compile_and_fit(multi_lstm_model, multi_window)
 
 val_performance = multi_lstm_model.evaluate(multi_window.val, return_dict=True)
 test_performance = multi_lstm_model.evaluate(multi_window.test, return_dict=True)
