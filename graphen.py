@@ -338,13 +338,13 @@ multi_lstm_model = tf.keras.Sequential([
     tf.keras.layers.Reshape([OUT_STEPS, num_features])
 ])
 
-#history = compile_and_fit(multi_lstm_model, multi_window)
-multi_lstm_model = tf.keras.models.load_model("best_model.keras")
+history = compile_and_fit(multi_lstm_model, multi_window)
+#multi_lstm_model = tf.keras.models.load_model("best_model.keras")
 
-#val_performance = multi_lstm_model.evaluate(multi_window.val, return_dict=True)
-#test_performance = multi_lstm_model.evaluate(multi_window.test, return_dict=True)
+val_performance = multi_lstm_model.evaluate(multi_window.val, return_dict=True)
+test_performance = multi_lstm_model.evaluate(multi_window.test, return_dict=True)
 
-#print("Validation:", val_performance)
-#print("Test:", test_performance)
+print("Validation:", val_performance)
+print("Test:", test_performance)
 
 multi_window.plot(multi_lstm_model, plot_col="Temperatur_2m (°C)", normed=False)
