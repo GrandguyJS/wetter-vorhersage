@@ -325,13 +325,14 @@ def compile_and_fit(model, window, patience=2):
 # LSTM multi output - one shot 24h output
         
 OUT_STEPS = 24
-num_features = train_df.shape[1]
 
 multi_window = WindowGenerator(
     input_width=120,
     label_width=OUT_STEPS,
-    shift=OUT_STEPS
+    shift=OUT_STEPS,
+    label_columns=["Temperatur_2m (°C)", "Relative_Luftfeuchtigkeit_2m (%)", "Regen (mm)", "Schneefall (cm)", "Luftdruck (hPa)", "Bewölkung (%)", "Windgeschwindigkeit_10m_x (km/h)", "Windgeschwindigkeit_10m_y (km/h)", "Windböen_10m_x (km/h)", "Windböen_10m_y (km/h)"]
 )
+num_features = len(multi_window.label_columns)
 
 if os.path.exists(model_path):
     print("Loading existing model...")
@@ -342,12 +343,26 @@ if os.path.exists(model_path):
 
 else:
     print("Training new model...")
+
     multi_lstm_model = tf.keras.Sequential([
         tf.keras.layers.LSTM(32, return_sequences=False),
         tf.keras.layers.Dense(OUT_STEPS * num_features,
                               kernel_initializer=tf.initializers.zeros()),
         tf.keras.layers.Reshape([OUT_STEPS, num_features])
     ])
+
+    """
+    multi_lstm_model = tf.keras.Sequential([
+        tf.keras.layers.LSTM(128, return_sequences=True),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.LSTM(64, return_sequences=True),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.LSTM(32, return_sequences=False),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(OUT_STEPS * num_features),
+        tf.keras.layers.Reshape([OUT_STEPS, num_features])
+    ])
+    """
 
     history = compile_and_fit(multi_lstm_model, multi_window)
 
