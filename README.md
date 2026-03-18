@@ -1,6 +1,6 @@
 # Wettervorhersage mit einem neuronalen Netzwerk
 
-Dieses Projekt wendet den Workflow von (TensorFlow)[https://www.tensorflow.org/tutorials/structured_data/time_series] an, um Wetterdaten zu sammeln, für ein neuronales Netzwerk aufzubereiten, ein Modell zu trainieren, dessen Qualität zu bewerten und anschließend eine Vorhersage für die nächsten Stunden zu erzeugen. Die Pipeline ist in einzelne Python-Skripte im Ordner `workflow/` aufgeteilt, sodass jeder Schritt nachvollziehbar bleibt.
+Dieses Projekt wendet den Workflow von [TensorFlow](https://www.tensorflow.org/tutorials/structured_data/time_series) an, um Wetterdaten zu sammeln, für ein neuronales Netzwerk aufzubereiten, ein Modell zu trainieren, dessen Qualität zu bewerten und anschließend eine Vorhersage für die nächsten Stunden zu erzeugen. Die Pipeline ist in einzelne Python-Skripte im Ordner `workflow/` aufgeteilt, sodass jeder Schritt nachvollziehbar bleibt.
 
 Im Fokus steht eine Zeitreihen-Vorhersage auf Basis historischer Stundenwerte.
 
@@ -268,7 +268,7 @@ Das ist wichtig, damit Forecasts später mit genau denselben Fenstergrößen erz
 
 ### 5.2 Architektur des neuronalen Netzes
 
-Falls noch kein gespeichertes Modell existiert, wird ein neues Keras-Modell aufgebaut. Hier ein (Standard-Modell)[https://github.com/iamtekson/deep-learning-for-earth-observation/blob/main/Notebooks/05.%20time-series-analysis-LSTM/Weather_prediction_(LSTM).ipynb]:
+Falls noch kein gespeichertes Modell existiert, wird ein neues Keras-Modell aufgebaut. Hier ein [Standard-Modell](https://github.com/iamtekson/deep-learning-for-earth-observation/blob/main/Notebooks/05.%20time-series-analysis-LSTM/Weather_prediction_(LSTM).ipynb):
 
 1. `LSTM(128, return_sequences=True)`
 2. `Dropout(0.2)`
