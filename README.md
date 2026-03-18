@@ -376,7 +376,7 @@ Danach:
 1. Umwandlung der Eingabewerte in ein `np.array`
 2. Umwandeln des Array zur Form `(1, INPUT_WIDTH, ANZAHL_LABELS)` (Bsp: `(1, 24, 1)`)
 3. Berechnen der Vorhersage mit dem Modell
-4. Entnormalisierung der Ausgave
+4. Entnormalisierung der Ausgabe
 
 Zusätzlich wird der Vorhersagezeitraum ausgegeben, zum Beispiel von Stunde `0:00` bis Stunde `23:00` nach dem letzten bekannten Messwert.
 
@@ -414,14 +414,3 @@ Das Projekt enthält schon 3 vortrainierte Modelle:
 1. `models/model_simple.keras`: Sagt mit 120 Stunden Vergangenheit, 24 Stunden mit 10 Parametern hervor. 32-LSTM-Layer --> 240-Dense-Layer --> 24*10 Ausgabe (24 Stunden; 10 Parameter)
 2. `models/model_temp.keras`: Sagt mit 120 Stunden Vergangenheit, 24 Stunden mit 1 Parameter (Temperatur) hervor. 32-LSTM-Layer --> 24-Dense-Layer --> 24*1 Ausgabe (24 Stunden; Temperatur)
 3. `models/model_complex_temp.keras`: Sagt mit 120 Stunden Vergangenheit, 24 Stunden mit 1 Parameter (Temperatur) hervor. 128-LSTM-Layer --> 0.2 Dropout --> 64-LSTM-Layer --> 0.2 Dropout --> 32-LSTM-Layer --> 0.2 Dropout --> 24-Dense --> 24*1 Ausgabe (24 Stunden; Temperatur)
-
-## Fazit
-
-Dieses Projekt bildet einen vollständigen End-to-End-Workflow für Wettervorhersage mit einem neuronalen Netzwerk ab:
-
-1. historische Wetterdaten laden
-2. periodische und meteorologische Merkmale in lernbare Features umwandeln
-3. Daten normalisieren und aufteilen
-4. mit LSTM-Zeitfenstern trainieren
-5. Modell evaluieren
-6. reale 24-Stunden-Prognosen erzeugen
