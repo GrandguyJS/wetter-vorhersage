@@ -17,7 +17,7 @@ SHIFT = 24 # Kein Abstand zwischen Vergangenheit und Prognose (letzter Wert ist 
 LABEL_COLUMNS = ["Temperatur_2m (°C)"]
 
 # Training
-MAX_EPOCHS = 50 # Anzahl Epochen
+MAX_EPOCHS = 20 # Anzahl Epochen
 model_path = f"./models/{args.model}"
 model_data_path = "." + "".join(model_path.split(".")[:-1]) + ".json"
 

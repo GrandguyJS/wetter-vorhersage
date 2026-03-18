@@ -9,7 +9,7 @@
 
 import pandas as pd
 
-df = pd.read_csv("./data/data_ready_de.csv")
+df = pd.read_csv("./data/data_converted.csv")
 
 # 70-20-10 Aufteilung der Trainings-, Validierungs- und Testdatensets
 n = len(df)
