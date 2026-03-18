@@ -1,6 +1,6 @@
 # Wettervorhersage mit einem neuronalen Netzwerk
 
-Dieses Projekt wendet den Workflow von [TensorFlow](https://www.tensorflow.org/tutorials/structured_data/time_series) an, um Wetterdaten zu sammeln, für ein neuronales Netzwerk aufzubereiten, ein Modell zu trainieren, dessen Qualität zu bewerten und anschließend eine Vorhersage für die nächsten Stunden zu erzeugen. Die Pipeline ist in einzelne Python-Skripte im Ordner `workflow/` aufgeteilt, sodass jeder Schritt nachvollziehbar bleibt.
+Dieses Projekt wendet ein abgeändertes Workflow von [TensorFlow](https://www.tensorflow.org/tutorials/structured_data/time_series) an, um Wetterdaten zu sammeln, für ein neuronales Netzwerk aufzubereiten, ein Modell zu trainieren, dessen Qualität zu bewerten und anschließend eine Vorhersage für die nächsten Stunden zu erzeugen. Die Pipeline ist in einzelne Python-Skripte im Ordner `workflow/` aufgeteilt, sodass jeder Schritt nachvollziehbar bleibt.
 
 Im Fokus steht eine Zeitreihen-Vorhersage auf Basis historischer Stundenwerte.
 
