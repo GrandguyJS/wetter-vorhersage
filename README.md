@@ -401,7 +401,6 @@ Wenn alle Dateien und Abhängigkeiten vorhanden sind, sieht der typische Workflo
 ```bash
 python workflow/1-data-collect.py
 python workflow/2-data-convert.py
-# Danach Dateiname angleichen: data_converted.csv <-> data_ready_de.csv
 python workflow/3-data-normalise-split.py
 python workflow/4-train-eval-test-forecast.py --model model_complex_temp.keras --train
 python workflow/4-train-eval-test-forecast.py --model model_complex_temp.keras --validate
