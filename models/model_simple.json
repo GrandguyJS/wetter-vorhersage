@@ -1,0 +1,17 @@
+{
+  "input_width": 120,
+  "label_width": 24,
+  "shift": 24,
+  "label_columns": [
+    "Temperatur_2m (°C)",
+    "Relative_Luftfeuchtigkeit_2m (%)",
+    "Regen (mm)",
+    "Schneefall (cm)",
+    "Luftdruck (hPa)",
+    "Bewölkung (%)",
+    "Windgeschwindigkeit_10m_x (km/h)",
+    "Windgeschwindigkeit_10m_y (km/h)",
+    "Windböen_10m_x (km/h)",
+    "Windböen_10m_y (km/h)"
+  ]
+}

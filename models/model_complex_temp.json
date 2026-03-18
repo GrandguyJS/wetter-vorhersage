@@ -1,0 +1,8 @@
+{
+  "input_width": 120,
+  "label_width": 24,
+  "shift": 24,
+  "label_columns": [
+    "Temperatur_2m (°C)"
+  ]
+}
